@@ -134,7 +134,7 @@ def delete_favourites(favourites):
     """Remove favourites in Supabase."""
     today_str = datetime.now().strftime("%Y-%m-%d")
     for uri in favourites:
-        supabase_delete_record(FAVOURITES_TABLE, uri, "admin"})
+        supabase_delete_record(FAVOURITES_TABLE, uri, "admin")
     st.success("Favourites deleted successfully!")
 
 
