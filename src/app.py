@@ -247,17 +247,27 @@ def refresh_data(store_id=None):
 FAVOURITES_FILE = "favourites.json"
 
 def load_favourites():
-    """Load favourites from the JSON file."""
+    """Load favourites from the KV Store."""
+    kv_url = "https://<your-kv-store-url>/favourites.json"  # Replace with your KV Store URL
+    headers = {"Authorization": "Bearer <your-kv-store-token>"}  # Replace with your KV Store token
     try:
-        with open(FAVOURITES_FILE, "r") as f:
-            return json.load(f)
-    except FileNotFoundError:
+        response = requests.get(kv_url, headers=headers)
+        if response.status_code == 200:
+            return response.json()
+        else:
+            st.error("Failed to load favourites from KV Store.")
+            return []
+    except Exception as e:
+        st.error(f"Error loading favourites: {e}")
         return []
 
 def save_favourites(favourites):
-    """Save favourites to the JSON file."""
-    with open(FAVOURITES_FILE, "w") as f:
-        json.dump(favourites, f)
+    """Save favourites to the KV Store."""
+    kv_url = "https://<your-kv-store-url>/favourites.json"  # Replace with your KV Store URL
+    headers = {"Authorization": "Bearer <your-kv-store-token>"}  # Replace with your KV Store token
+    response = requests.put(kv_url, json=favourites, headers=headers)
+    if response.status_code != 200:
+        st.error("Failed to save favourites to KV Store.")
 
 def toggle_favourite(wine_id):
     """Toggle the favourite status of a wine."""
@@ -269,7 +279,7 @@ def toggle_favourite(wine_id):
     else:
         st.session_state.favourites.append(wine_id)  # Favourite
 
-    # Save the updated favourites to the JSON file
+    # Save the updated favourites to the KV Store
     save_favourites(st.session_state.favourites)
 
     # Mark the session state as updated
@@ -417,10 +427,13 @@ def main():
         # Favourite button
         is_favourite = wine_id in st.session_state.favourites  # Check the updated favourites list
         heart_icon = "❤️" if is_favourite else "🤍"
-        if st.button(f"{heart_icon} Favourite", key=f"fav-{wine_id}"):
-            toggle_favourite(wine_id)
-            # Force a refresh of the app to update the button state
-            st.rerun()
+        if st.session_state.authorized:
+            if st.button(f"{heart_icon} Favourite", key=f"fav-{wine_id}"):
+                toggle_favourite(wine_id)
+                # Force a refresh of the app to update the button state
+                st.rerun()
+        else:
+            st.markdown(f"{heart_icon} Favourite (Admin Only)", unsafe_allow_html=True)
 
         # Raw SVG data for the sale icon
         sale_icon_svg = """
