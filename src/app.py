@@ -248,8 +248,8 @@ FAVOURITES_FILE = "favourites.json"
 
 def load_favourites():
     """Load favourites from the KV Store."""
-    kv_url = "https://<your-kv-store-url>/favourites.json"  # Replace with your KV Store URL
-    headers = {"Authorization": "Bearer <your-kv-store-token>"}  # Replace with your KV Store token
+    kv_url = "https://api.kvstore.io/collections/fa470bf0-c9cd-401d-a0c5-5bbc239f6e9d/favourites.json"
+    headers = {"Authorization": f"Bearer {st.secrets['kv_api_key']}"}
     try:
         response = requests.get(kv_url, headers=headers)
         if response.status_code == 200:
@@ -263,8 +263,8 @@ def load_favourites():
 
 def save_favourites(favourites):
     """Save favourites to the KV Store."""
-    kv_url = "https://<your-kv-store-url>/favourites.json"  # Replace with your KV Store URL
-    headers = {"Authorization": "Bearer <your-kv-store-token>"}  # Replace with your KV Store token
+    kv_url = "https://api.kvstore.io/collections/fa470bf0-c9cd-401d-a0c5-5bbc239f6e9d/favourites.json"
+    headers = {"Authorization": f"Bearer {st.secrets['kv_api_key']}"}
     response = requests.put(kv_url, json=favourites, headers=headers)
     if response.status_code != 200:
         st.error("Failed to save favourites to KV Store.")
