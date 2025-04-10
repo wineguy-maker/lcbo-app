@@ -324,8 +324,13 @@ def save_favourites(favourites):
     if response.status_code == 200:
         st.success("Favourites saved successfully!")
     elif response.status_code == 404:
-        st.error("Failed to save favourites. The key 'favourites' does not exist in the collection.")
-        st.write("Ensure the collection and key are properly created.")
+        st.warning("Key 'favourites' does not exist. Attempting to create it...")
+        # Create the key if it does not exist
+        create_response = requests.post(kv_url, headers=headers, json=payload)
+        if create_response.status_code == 201:
+            st.success("Key 'favourites' created and favourites saved successfully!")
+        else:
+            st.error(f"Failed to create key 'favourites'. Status code: {create_response.status_code}, Response: {create_response.text}")
     else:
         st.error(f"Failed to save favourites. Status code: {response.status_code}, Response: {response.text}")
         st.write("Payload:", payload)  # Log the payload for debugging
