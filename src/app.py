@@ -257,6 +257,7 @@ def ensure_collection_exists(collection_name):
     if response.status_code == 200:
         try:
             collections = response.json()
+            st.write("KV Store API Response:", collections)  # Log the raw response for debugging
             if isinstance(collections, list):  # Ensure it's a list
                 if collection_name not in [col.get("collection", "") for col in collections]:
                     st.info(f"Collection '{collection_name}' does not exist. Creating it...")
@@ -268,16 +269,16 @@ def ensure_collection_exists(collection_name):
                     if create_response.status_code == 201:
                         st.success(f"Collection '{collection_name}' created successfully!")
                     else:
-                        st.error("Failed to create collection.")
-                       
+                        st.error(f"Failed to create collection. Response: {create_response.text}")
+                        
             else:
-                st.error("Unexpected response format from KV Store API.")
-               
+                st.error(f"Unexpected response format from KV Store API: {collections}")
+                
         except Exception as e:
             st.error(f"Error parsing KV Store response: {e}")
             
     else:
-        st.error(f"Failed to check collections. Status code: {response.status_code}")
+        st.error(f"Failed to check collections. Status code: {response.status_code}, Response: {response.text}")
         
 
 def load_favourites():
