@@ -5,6 +5,15 @@ from datetime import datetime
 import requests
 import re
 import json
+import firebase_admin
+from firebase_admin import credentials, db
+
+# Initialize Firebase Admin SDK
+if not firebase_admin._apps:
+    cred = credentials.Certificate(st.secrets["firebase_credentials"])
+    firebase_admin.initialize_app(cred, {
+        'databaseURL': st.secrets["firebase_database"]["url"]
+    })
 
 # -------------------------------
 # Data Handling
@@ -244,96 +253,27 @@ def refresh_data(store_id=None):
 # -------------------------------
 # Favourites Handling
 # -------------------------------
-FAVOURITES_FILE = "favourites.json"
-
 def ensure_collection_exists(collection_name):
-    """Ensure the KV Store collection exists."""
-    base_url = "https://api.kvstore.io/collections"
-    headers = {
-        "Content-Type": "application/json",
-        "kvstoreio_api_key": st.secrets["kv_api_key"]
-    }
-    response = requests.get(base_url, headers=headers)
-    if response.status_code == 200:
-        try:
-            collections_data = response.json()
-            st.write("KV Store API Response:", collections_data)  # Log the raw response for debugging
-
-            # Extract collections based on the response format
-            if isinstance(collections_data.get("collections"), dict):  # Handle dictionary format
-                collections = collections_data["collections"]
-                st.info(f"Existing collections: {list(collections.keys())}")
-            else:
-                st.error(f"Unexpected 'collections' format: {collections_data.get('collections')}")
-                st.stop()
-
-            # Check if the collection exists
-            if collection_name not in collections:
-                st.info(f"Collection '{collection_name}' does not exist. Creating it...")
-                create_response = requests.post(
-                    base_url,
-                    headers=headers,
-                    json={"collection": collection_name}
-                )
-                if create_response.status_code == 201:
-                    st.success(f"Collection '{collection_name}' created successfully!")
-                else:
-                    st.error(f"Failed to create collection. Status code: {create_response.status_code}, Response: {create_response.text}")
-                    st.stop()
-            else:
-                st.info(f"Collection '{collection_name}' already exists.")
-        except Exception as e:
-            st.error(f"Error parsing KV Store response: {e}")
-            st.stop()
-    else:
-        st.error(f"Failed to check collections. Status code: {response.status_code}, Response: {response.text}")
-        st.stop()
+    """Ensure the Firebase collection exists."""
+    ref = db.reference(collection_name)
+    if not ref.get():
+        ref.set({"favourites": []})  # Initialize with an empty list
 
 def load_favourites():
-    """Load favourites from the KV Store."""
+    """Load favourites from Firebase."""
     collection_name = "favourites_collection"
     ensure_collection_exists(collection_name)  # Ensure the collection exists
-    kv_url = f"https://api.kvstore.io/collections/{collection_name}/items/favourites"
-    headers = {"kvstoreio_api_key": st.secrets["kv_api_key"]}
-    try:
-        response = requests.get(kv_url, headers=headers)
-        if response.status_code == 200:
-            return response.json().get("value", [])
-        elif response.status_code == 404:
-            return []  # Key does not exist yet
-        else:
-            st.error("Failed to load favourites from KV Store.")
-            return []
-    except Exception as e:
-        st.error(f"Error loading favourites: {e}")
-        return []
+    ref = db.reference(f"{collection_name}/favourites")
+    favourites = ref.get()
+    return favourites if favourites else []
 
 def save_favourites(favourites):
-    """Save favourites to the KV Store."""
+    """Save favourites to Firebase."""
     collection_name = "favourites_collection"
     ensure_collection_exists(collection_name)  # Ensure the collection exists
-    kv_url = f"https://api.kvstore.io/collections/{collection_name}/items/favourites"
-    headers = {
-        "kvstoreio_api_key": st.secrets["kv_api_key"],
-        "Content-Type": "application/json"
-    }
-    payload = {"value": favourites}
-    st.write(f"Saving favourites to URL: {kv_url}")  # Log the full URL for debugging
-    response = requests.put(kv_url, headers=headers, json=payload)
-    
-    if response.status_code == 200:
-        st.success("Favourites saved successfully!")
-    elif response.status_code == 404:
-        st.warning("Key 'favourites' does not exist. Attempting to create it...")
-        # Create the key if it does not exist
-        create_response = requests.post(kv_url, headers=headers, json=payload)
-        if create_response.status_code == 201:
-            st.success("Key 'favourites' created and favourites saved successfully!")
-        else:
-            st.error(f"Failed to create key 'favourites'. Status code: {create_response.status_code}, Response: {create_response.text}")
-    else:
-        st.error(f"Failed to save favourites. Status code: {response.status_code}, Response: {response.text}")
-        st.write("Payload:", payload)  # Log the payload for debugging
+    ref = db.reference(f"{collection_name}/favourites")
+    ref.set(favourites)
+    st.success("Favourites saved successfully!")
 
 def toggle_favourite(wine_id):
     """Toggle the favourite status of a wine."""
@@ -345,7 +285,7 @@ def toggle_favourite(wine_id):
     else:
         st.session_state.favourites.append(wine_id)  # Favourite
 
-    # Save the updated favourites to the KV Store
+    # Save the updated favourites to the Firebase
     save_favourites(st.session_state.favourites)
 
     # Mark the session state as updated
