@@ -10,8 +10,8 @@ from supabase import create_client, Client
 
 # Supabase Configuration
 SUPABASE_URL = "https://xofspwrujtkdwzosnfdi.supabase.co"
-SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhvZnNwd3J1anRrZHd6b3NuZmRpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDQzMDYyMTYsImV4cCI6MjA1OTg4MjIxNn0.7JlWDVMDjcaEoowqdAm1dBviGQt_2Mn1b4aOtz0E0NI"
-supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
+SUPABASE_SERVICE_ROLE_KEY = "your_service_role_key_here"  # Replace with your service role key
+supabase: Client = create_client(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
 
 PRODUCTS_TABLE = "Products"
 FAVOURITES_TABLE = "Favourites"
