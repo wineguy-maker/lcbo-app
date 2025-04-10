@@ -18,10 +18,14 @@ FAVOURITES_TABLE = "Favourites"
 
 def supabase_get_records(table_name):
     """Fetch all records from a Supabase table."""
-    response = supabase.table(table_name).select("*").execute()
-    if response.error:
-        raise Exception(f"Error fetching records: {response.error}")
-    return response.data
+    try:
+        response = supabase.table(table_name).select("*").execute()
+        if response.status_code != 200:
+            raise Exception(f"Error fetching records: {response.status_code} - {response.json()}")
+        return response.data
+    except Exception as e:
+        st.error(f"Failed to fetch records from {table_name}: {e}")
+        return []
 
 def supabase_upsert_record(table_name, record):
     """Insert or update a record in a Supabase table."""
