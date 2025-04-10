@@ -86,6 +86,7 @@ def search_data(data, search_text):
     return data
 
 def sort_data_filter(data, sort_by):
+    """Sort data based on the selected criteria, with IMDb-style weighted rating as the default."""
     if sort_by == '# of reviews':
         data = data.sort_values(by='raw_avg_reviews', ascending=False)
     elif sort_by == 'Rating':
@@ -99,7 +100,21 @@ def sort_data_filter(data, sort_by):
     elif sort_by == 'Top Seller - Month':
         data = data.sort_values(by='raw_sell_rank_monthly', ascending=True)
     else:
+        # Default to IMDb-style weighted rating
         data = data.sort_values(by='weighted_rating', ascending=False)
+    return data
+
+def filter_and_sort_data(data, sort_by, **filters):
+    """Apply filters and ensure IMDb-style sorting is always the default."""
+    # Apply filters
+    data = filter_data(data, **filters)
+    
+    # Apply search filter
+    search_text = filters.get('search_text', '')
+    data = search_data(data, search_text)
+    
+    # Sort data
+    data = sort_data_filter(data, sort_by)
     return data
 
 def filter_data(data, country='All Countries', region='All Regions', varietal='All Varietals', exclude_usa=False, in_stock=False, only_vintages=False, store='Select Store'):
@@ -264,7 +279,7 @@ def background_update(products, today_str):
 
     # Check favourites for lowest prices and send an email
     lowest_price_items = get_favourites_with_lowest_price()
-    st.info("Low items.{lowest_price_items}")
+    
     send_email_with_lowest_prices(lowest_price_items)
     st.info("Background update: Price history and email notifications completed.")
 
@@ -274,7 +289,7 @@ def refresh_data(store_id=None):
     today_str = current_time.strftime("%Y-%m-%d")
     # Check if today's data already exists in Supabase
     records = supabase_get_records(PRODUCTS_TABLE)
-    
+   
     url = "https://platform.cloud.coveo.com/rest/search/v2?organizationId=lcboproduction2kwygmc"
     headers = {
         "User-Agent": "your_user_agent",
@@ -502,9 +517,17 @@ def main():
     favourites = st.session_state.favourites
    
     # Apply Filters and Sorting
-    filtered_data = data.copy()
-    filtered_data = filter_data(filtered_data, country=country, region=region, varietal=varietal, exclude_usa=exclude_usa, in_stock=in_stock, only_vintages=only_vintages)
-    filtered_data = search_data(filtered_data, search_text)
+    filters = {
+        'country': country,
+        'region': region,
+        'varietal': varietal,
+        'exclude_usa': exclude_usa,
+        'in_stock': in_stock,
+        'only_vintages': only_vintages,
+        'store': selected_store,
+        'search_text': search_text
+    }
+    filtered_data = filter_and_sort_data(data, sort_by, **filters)
 
     # Apply "Only Sale Items" filter
     if only_sale_items:
@@ -513,19 +536,6 @@ def main():
     # Apply "Only Favourites" filter
     if only_favourites:
         filtered_data = filtered_data[filtered_data['uri'].isin(favourites)]
-
-    # Food Category Filtering
-    if food_category != 'All Dishes':
-        selected_items = food_items[food_items['Category'] == food_category]['FoodItem'].str.lower().tolist()
-        filtered_data = filtered_data[filtered_data['raw_sysconcepts'].fillna('').apply(
-            lambda x: any(item in str(x).lower() for item in selected_items)
-        )]
-
-    sort_option = sort_by if sort_by != 'Sort by' else 'weighted_rating'
-    if sort_option != 'weighted_rating':
-        filtered_data = sort_data_filter(filtered_data, sort_option)
-    else:
-        filtered_data = sort_data(filtered_data, sort_option)
 
     st.write(f"Showing **{len(filtered_data)}** products")
              
