@@ -201,7 +201,7 @@ def get_favourites_with_lowest_price():
             continue  # Skip if no valid price is found
 
         # Look up the lowest price in the Price History table
-        history = [entry for entry in price_history if entry["Wine URI"] == uri]
+        history = [entry for entry in price_history if entry["URI"] == uri]
         if not history:
             continue
         lowest_price = min(entry["Price"] for entry in history)  
