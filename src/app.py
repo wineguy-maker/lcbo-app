@@ -269,16 +269,16 @@ def ensure_collection_exists(collection_name):
                         st.success(f"Collection '{collection_name}' created successfully!")
                     else:
                         st.error("Failed to create collection.")
-                        st.stop()
+                       
             else:
                 st.error("Unexpected response format from KV Store API.")
-                st.stop()
+               
         except Exception as e:
             st.error(f"Error parsing KV Store response: {e}")
-            st.stop()
+            
     else:
         st.error(f"Failed to check collections. Status code: {response.status_code}")
-        st.stop()
+        
 
 def load_favourites():
     """Load favourites from the KV Store."""
