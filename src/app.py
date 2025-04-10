@@ -7,6 +7,7 @@ import re
 import json
 import firebase_admin
 from firebase_admin import credentials, db
+from supabase import create_client, Client
 
 # Initialize Firebase Admin SDK
 if not firebase_admin._apps:
@@ -15,6 +16,43 @@ if not firebase_admin._apps:
     firebase_admin.initialize_app(cred, {
         'databaseURL': st.secrets["firebase_database"]["url"]
     })
+
+# Supabase Configuration
+SUPABASE_URL = "https://xofspwrujtkdwzosnfdi.supabase.co"
+SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhvZnNwd3J1anRrZHd6b3NuZmRpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDQzMDYyMTYsImV4cCI6MjA1OTg4MjIxNn0.7JlWDVMDjcaEoowqdAm1dBviGQt_2Mn1b4aOtz0E0NI"
+supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
+
+PRODUCTS_TABLE = "Products"
+FAVOURITES_TABLE = "Favourites"
+
+def supabase_get_records(table_name):
+    """Fetch all records from a Supabase table."""
+    response = supabase.table(table_name).select("*").execute()
+    if response.error:
+        raise Exception(f"Error fetching records: {response.error}")
+    return response.data
+
+def supabase_upsert_record(table_name, record):
+    """Insert or update a record in a Supabase table."""
+    response = supabase.table(table_name).upsert(record).execute()
+    if response.error:
+        raise Exception(f"Error upserting record: {response.error}")
+    return response.data
+
+def supabase_delete_record(table_name, filters):
+    """Delete a record from a Supabase table."""
+    query = supabase.table(table_name)
+    for key, value in filters.items():
+        query = query.eq(key, value)
+    response = query.delete().execute()
+    if response.error:
+        raise Exception(f"Error deleting record: {response.error}")
+    return response.data
+
+def load_products_from_supabase():
+    """Load products from Supabase."""
+    records = supabase_get_records(PRODUCTS_TABLE)
+    return pd.DataFrame(records)
 
 # -------------------------------
 # Data Handling
@@ -95,8 +133,15 @@ def transform_image_url(url, new_size):
 # Refresh function
 # -------------------------------
 def refresh_data(store_id=None):
+    """Refresh data and update Supabase."""
     current_time = datetime.now()
-    st.info("Refreshing data...")
+    today_str = current_time.strftime("%Y-%m-%d")
+
+    # Check if today's data already exists in Supabase
+    records = supabase_get_records(PRODUCTS_TABLE)
+    if any(record.get("Date") == today_str for record in records):
+        st.info("Today's data already exists in Supabase. Skipping refresh.")
+        return load_products_from_supabase()
 
     url = "https://platform.cloud.coveo.com/rest/search/v2?organizationId=lcboproduction2kwygmc"
     headers = {
@@ -244,9 +289,12 @@ def refresh_data(store_id=None):
             axis=1
         )
 
-        df_products.to_csv('products.csv', index=False, encoding='utf-8-sig')
-        st.success("Data refreshed successfully!")
-        return load_data("products.csv")
+        for product in products:
+            product["Date"] = today_str  # Add today's date to each product
+            supabase_upsert_record(PRODUCTS_TABLE, product)
+
+        st.success("Data refreshed and updated in Supabase!")
+        return load_products_from_supabase()
     else:
         st.error("Failed to retrieve data from the API.")
         return None
@@ -261,36 +309,26 @@ def ensure_collection_exists(collection_name):
         ref.set({"favourites": []})  # Initialize with an empty list
 
 def load_favourites():
-    """Load favourites from Firebase."""
-    collection_name = "favourites_collection"
-    ensure_collection_exists(collection_name)  # Ensure the collection exists
-    ref = db.reference(f"{collection_name}/favourites")
-    favourites = ref.get()
-    return favourites if favourites else []
+    """Load favourites from Supabase."""
+    records = supabase_get_records(FAVOURITES_TABLE)
+    return [record["URI"] for record in records if record.get("User ID") == "admin"]
 
 def save_favourites(favourites):
-    """Save favourites to Firebase."""
-    collection_name = "favourites_collection"
-    ensure_collection_exists(collection_name)  # Ensure the collection exists
-    ref = db.reference(f"{collection_name}/favourites")
-    ref.set(favourites)
+    """Save favourites to Supabase."""
+    today_str = datetime.now().strftime("%Y-%m-%d")
+    for uri in favourites:
+        supabase_upsert_record(FAVOURITES_TABLE, {"URI": uri, "Date": today_str, "User ID": "admin"})
     st.success("Favourites saved successfully!")
 
 def toggle_favourite(wine_id):
     """Toggle the favourite status of a wine."""
-    if "favourites" not in st.session_state:
-        st.session_state.favourites = load_favourites()
-
-    if wine_id in st.session_state.favourites:
-        st.session_state.favourites.remove(wine_id)  # Unfavourite
+    favourites = load_favourites()
+    if wine_id in favourites:
+        # Remove from favourites
+        supabase_delete_record(FAVOURITES_TABLE, {"URI": wine_id, "User ID": "admin"})
     else:
-        st.session_state.favourites.append(wine_id)  # Favourite
-
-    # Save the updated favourites to the Firebase
-    save_favourites(st.session_state.favourites)
-
-    # Mark the session state as updated
-    st.session_state.ui_updated = True
+        # Add to favourites
+        save_favourites([wine_id])
 
 # -------------------------------
 # Main Streamlit App
@@ -344,9 +382,9 @@ def main():
             store_id = store_ids.get(selected_store)
             data = refresh_data(store_id=store_id)
         else:
-            data = load_data("products.csv")
+            data = load_products_from_supabase()
     else:
-        data = load_data("products.csv")
+        data = load_products_from_supabase()
 
     search_text = st.sidebar.text_input("Search", value="")
     sort_by = st.sidebar.selectbox("Sort by",
