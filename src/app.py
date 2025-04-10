@@ -129,13 +129,21 @@ def save_favourites(favourites):
         supabase_upsert_record(FAVOURITES_TABLE, {"URI": uri, "Date": today_str, "User ID": "admin"})
     st.success("Favourites saved successfully!")
 
+def delete_favourites(favourites):
+    """Remove favourites in Supabase."""
+    today_str = datetime.now().strftime("%Y-%m-%d")
+    for uri in favourites:
+        supabase_delete_record(FAVOURITES_TABLE, {"URI": uri, "User ID": "admin"})
+    st.success("Favourites saved successfully!")
+
+
 def toggle_favourite(wine_id):
     """Toggle the favourite status of a wine."""
     # Load favourites filtered by the current user
     favourites = load_favourites()
     if wine_id in favourites:
         # Remove from favourites by filtering the table using the URI column
-        supabase_delete_record(FAVOURITES_TABLE, {"URI": wine_id})
+        delete_favourites([wine_id])
         st.success(f"Removed wine with URI '{wine_id}' from favourites.")
     else:
         # Add to favourites
