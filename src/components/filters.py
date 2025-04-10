@@ -36,3 +36,8 @@ def add_to_favorites(product):
 def remove_from_favorites(product):
     # Logic to remove product from favorites
     pass
+
+def filter_products(products, criteria):
+    """Filter products based on the given criteria."""
+    # Example filtering logic
+    return [product for product in products if criteria(product)]
