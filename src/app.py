@@ -302,12 +302,6 @@ def refresh_data(store_id=None):
 # -------------------------------
 # Favourites Handling
 # -------------------------------
-def ensure_collection_exists(collection_name):
-    """Ensure the Firebase collection exists."""
-    ref = db.reference(collection_name)
-    if not ref.get():
-        ref.set({"favourites": []})  # Initialize with an empty list
-
 def load_favourites():
     """Load favourites from Supabase."""
     records = supabase_get_records(FAVOURITES_TABLE)
@@ -337,6 +331,12 @@ def main():
     st.title("LCBO Wine Filter")
     # Add this line to clear the cached data
     st.cache_data.clear()
+
+    # Sidebar Filters with improved header
+    st.sidebar.header("Filter Options 🔍")
+
+    # Authorization in the filters pane
+    if "authorized" not in st.session_state:
 
     # Sidebar Filters with improved header
     st.sidebar.header("Filter Options 🔍")
