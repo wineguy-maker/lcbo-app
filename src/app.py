@@ -264,6 +264,7 @@ def background_update(products, today_str):
 
     # Check favourites for lowest prices and send an email
     lowest_price_items = get_favourites_with_lowest_price()
+     st.info("Low items.{lowest_price_items}")
     send_email_with_lowest_prices(lowest_price_items)
     st.info("Background update: Price history and email notifications completed.")
 
