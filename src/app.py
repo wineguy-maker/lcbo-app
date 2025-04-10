@@ -121,7 +121,6 @@ def filter_data(data, country='All Countries', region='All Regions', varietal='A
 def load_favourites():
     """Load favourites from Supabase."""
     records = supabase_get_records(FAVOURITES_TABLE)
-    print("Debug: Records fetched:", records)
     return [record["URI"] for record in records if record.get("User ID") == "admin"]
 
 
@@ -130,16 +129,18 @@ def save_favourites(favourites):
     today_str = datetime.now().strftime("%Y-%m-%d")
     for uri in favourites:
         supabase_upsert_record(FAVOURITES_TABLE, {"URI": uri, "Date": today_str, "User ID": "admin"})
-    
-    # Force a refresh of the app to update the button state
+    # Reload favourites to ensure button state is updated
+    st.session_state.favourites = load_favourites()
+    st.success("Favourites saved successfully!")
     st.rerun()
 
 def delete_favourites(favourites):
     """Remove favourites in Supabase."""
     for uri in favourites:
         supabase_delete_record(FAVOURITES_TABLE, uri, "admin")
+    # Reload favourites to ensure button state is updated
+    st.session_state.favourites = load_favourites()
     st.success("Favourites deleted successfully!")
-    # Force a refresh of the app to update the button state
     st.rerun()
 
 def toggle_favourite(wine_id):
