@@ -45,3 +45,7 @@ def remove_favorite(wine_id, favorites):
 def is_favorite(wine_id, favorites):
     """Check if a wine is in the favorites list."""
     return wine_id in favorites
+
+def load_data():
+    """Placeholder for load_data function."""
+    pass

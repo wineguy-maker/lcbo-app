@@ -1,5 +1,10 @@
 # File: /WineFind/WineFind/src/app.py
 
+import sys
+import os
+sys.path.insert(0, os.path.abspath(os.path.dirname(__file__)))
+
+import streamlit as st
 from utils.auth import verify_pin
 from utils.data import load_products, load_favorites, save_favorites, add_favorite, remove_favorite
 from components.filters import filter_products
