@@ -20,9 +20,7 @@ def supabase_get_records(table_name):
     """Fetch all records from a Supabase table."""
     try:
         response = supabase.table(table_name).select("*").execute()
-        if response.status_code != 200:
-            raise Exception(f"Error fetching records: {response.status_code} - {response.data}")
-        return response.data
+        return response.data  # Use the data attribute for successful responses
     except Exception as e:
         st.error(f"Failed to fetch records from {table_name}: {e}")
         return []
@@ -31,9 +29,7 @@ def supabase_upsert_record(table_name, record):
     """Insert or update a record in a Supabase table."""
     try:
         response = supabase.table(table_name).upsert(record).execute()
-        if response.status_code != 200:
-            raise Exception(f"Error upserting record: {response.status_code} - {response.data}")
-        return response.data
+        return response.data  # Use the data attribute for successful responses
     except Exception as e:
         st.error(f"Failed to upsert record in {table_name}: {e}")
         return None
@@ -45,9 +41,7 @@ def supabase_delete_record(table_name, filters):
         for key, value in filters.items():
             query = query.eq(key, value)
         response = query.delete().execute()
-        if response.status_code != 200:
-            raise Exception(f"Error deleting record: {response.status_code} - {response.data}")
-        return response.data
+        return response.data  # Use the data attribute for successful responses
     except Exception as e:
         st.error(f"Failed to delete record from {table_name}: {e}")
         return None
