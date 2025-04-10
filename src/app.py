@@ -1,8 +1,10 @@
 # File: /WineFind/WineFind/src/app.py
 
+
 import streamlit as st
 from utils.auth import verify_pin
-from utils.data import load_products, load_favorites, save_favorites, add_favorite, remove_favorite, filter_products
+from utils.data import load_products, load_favorites, save_favorites, add_favorite, remove_favorite
+from components.filters import filter_products
 from components.product_display import display_products
 
 # Initialize the Streamlit app
