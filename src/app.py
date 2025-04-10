@@ -39,6 +39,8 @@ def supabase_delete_record(table_name, filters):
     try:
         query = supabase.table(table_name)
         for key, value in filters.items():
+            if not isinstance(value, (str, int, float, bool)):
+                raise ValueError(f"Invalid filter value for key '{key}': {value} (type: {type(value)})")
             query = query.eq(key, value)
         response = query.delete().execute()
         return response.data  # Use the data attribute for successful responses
