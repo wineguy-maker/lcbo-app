@@ -264,7 +264,7 @@ def ensure_collection_exists(collection_name):
                 collections = list(collections_data["collections"].keys())
             else:
                 st.error(f"Unexpected 'collections' format: {collections_data.get('collections')}")
-                
+                st.stop()
 
             # Check if the collection exists
             if collection_name not in collections:
@@ -277,14 +277,14 @@ def ensure_collection_exists(collection_name):
                 if create_response.status_code == 201:
                     st.success(f"Collection '{collection_name}' created successfully!")
                 else:
-                    st.error(f"Failed to create collection. Response: {create_response.text}")
-             
+                    st.error(f"Failed to create collection. Status code: {create_response.status_code}, Response: {create_response.text}")
+                    st.stop()
         except Exception as e:
             st.error(f"Error parsing KV Store response: {e}")
-            
+            st.stop()
     else:
         st.error(f"Failed to check collections. Status code: {response.status_code}, Response: {response.text}")
-       
+        st.stop()
 
 def load_favourites():
     """Load favourites from the KV Store."""
