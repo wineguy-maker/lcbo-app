@@ -131,10 +131,11 @@ def save_favourites(favourites):
 
 def toggle_favourite(wine_id):
     """Toggle the favourite status of a wine."""
+    # Load favourites filtered by the current user
     favourites = load_favourites()
     if wine_id in favourites:
-        # Remove from favourites
-        supabase_delete_record(FAVOURITES_TABLE, {"URI": wine_id, "User ID": "admin"})
+        # Remove from favourites by filtering the table using the URI column
+        supabase_delete_record(FAVOURITES_TABLE, {"URI": wine_id})
         st.success(f"Removed wine with URI '{wine_id}' from favourites.")
     else:
         # Add to favourites
