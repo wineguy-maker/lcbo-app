@@ -318,10 +318,14 @@ def save_favourites(favourites):
         "Content-Type": "application/json"
     }
     payload = {"value": favourites}
+    st.write(f"Saving favourites to URL: {kv_url}")  # Log the full URL for debugging
     response = requests.put(kv_url, headers=headers, json=payload)
     
     if response.status_code == 200:
         st.success("Favourites saved successfully!")
+    elif response.status_code == 404:
+        st.error("Failed to save favourites. The key 'favourites' does not exist in the collection.")
+        st.write("Ensure the collection and key are properly created.")
     else:
         st.error(f"Failed to save favourites. Status code: {response.status_code}, Response: {response.text}")
         st.write("Payload:", payload)  # Log the payload for debugging
