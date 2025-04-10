@@ -8,6 +8,7 @@ from supabase import create_client, Client
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+import threading
 
 # Supabase Configuration
 SUPABASE_URL = st.secrets["supabase"]["url"]
@@ -194,13 +195,13 @@ def get_favourites_with_lowest_price():
         if not product:
             continue
         current_price = product.get("raw_ec_promo_price", "N/A")
-        if current_price == "N/A":
+        if (current_price == "N/A"):
             current_price = product.get("raw_ec_price", "N/A")
-        if current_price == "N/A":
+        if (current_price == "N/A"):
             continue  # Skip if no valid price is found
 
         # Look up the lowest price in the Price History table
-        history = [entry for entry in price_history if entry["Wine URI"] == uri]
+        history = [entry for entry in price_history if entry["URI"] == uri]
         if not history:
             continue
         lowest_price = min(entry["Price"] for entry in history)  
@@ -216,41 +217,55 @@ def get_favourites_with_lowest_price():
     return lowest_price_items
 
 def send_email_with_lowest_prices(items):
-    """Send an email with the list of favourite items at their lowest price using Postmark."""
+    """Send an email with the list of favourite items at their lowest price using Postmark SMTP."""
     if not items:
         return
 
-    # Postmark API configuration
-    api_url = "https://api.postmarkapp.com/email"
-    api_token = st.secrets["postmark_token"]  # Retrieve the token from secrets
+    # Postmark SMTP configuration
+    smtp_server = "smtp-broadcasts.postmarkapp.com"
+    smtp_port = 587
+    smtp_username = "PM-B-broadcast-o5E13wA0FjsIeCQNnCbh3"
+    smtp_password = "_PShFYnMnyik9CCoMZi7cog6W_oV8PjnxsK7"
 
-    # Prepare the email content
+    # Email configuration
+    sender_email = "winefind@justemail.ca"  # Replace with your sender email
+    receiver_email = "winefind@justemail.ca"  # Replace with your recipient email
     subject = "Favourites at Their Lowest Price"
+
+    # Create the email content
+    message = MIMEMultipart()
+    message["From"] = sender_email
+    message["To"] = receiver_email
+    message["Subject"] = subject
+
     html_content = "<h3>Favourites at Their Lowest Price</h3><table border='1'><tr><th>Title</th><th>URI</th><th>Current Price</th><th>Lowest Price</th></tr>"
     for item in items:
         html_content += f"<tr><td>{item['Title']}</td><td><a href='{item['URI']}'>{item['URI']}</a></td><td>{item['Current Price']}</td><td>{item['Lowest Price']}</td></tr>"
     html_content += "</table>"
 
-    # Create the email payload
-    payload = {
-        "From": "winefind@justemail.ca",  # Replace with your sender email
-        "To": "winefind@justemail.ca",  # Replace with your recipient email
-        "Subject": subject,
-        "HtmlBody": html_content
-    }
+    message.attach(MIMEText(html_content, "html"))
 
-    # Send the email via Postmark API
-    headers = {
-        "X-Postmark-Server-Token": api_token,
-        "Content-Type": "application/json"
-    }
-
+    # Send the email via Postmark SMTP
     try:
-        response = requests.post(api_url, json=payload, headers=headers)
-        response.raise_for_status()
-        st.success("Email sent successfully via Postmark!")
-    except requests.exceptions.RequestException as e:
-        st.error(f"Failed to send email via Postmark: {e}")
+        with smtplib.SMTP(smtp_server, smtp_port) as server:
+            server.starttls()
+            server.login(smtp_username, smtp_password)
+            server.sendmail(sender_email, receiver_email, message.as_string())
+        st.success("Email sent successfully via Postmark SMTP!")
+    except Exception as e:
+        st.error(f"Failed to send email via Postmark SMTP: {e}")
+
+def background_update(products, today_str):
+    """Perform table updates and price history processing in the background."""
+    for product in products:
+        product["Date"] = today_str  # Add today's date to each product
+        supabase_upsert_record(PRODUCTS_TABLE, product)
+    st.info("Background update: Products table updated.")
+
+    # Check favourites for lowest prices and send an email
+    lowest_price_items = get_favourites_with_lowest_price()
+    send_email_with_lowest_prices(lowest_price_items)
+    st.info("Background update: Price history and email notifications completed.")
 
 def refresh_data(store_id=None):
     """Refresh data and update Supabase."""
@@ -258,7 +273,10 @@ def refresh_data(store_id=None):
     today_str = current_time.strftime("%Y-%m-%d")
     # Check if today's data already exists in Supabase
     records = supabase_get_records(PRODUCTS_TABLE)
-    
+    if any(record.get("Date") == today_str for record in records):
+        st.info("Today's data already exists. Skipping refresh.")
+        return load_products_from_supabase()
+
     url = "https://platform.cloud.coveo.com/rest/search/v2?organizationId=lcboproduction2kwygmc"
     headers = {
         "User-Agent": "your_user_agent",
@@ -333,6 +351,7 @@ def refresh_data(store_id=None):
             else:
                 st.error(f"Key 'results' not found in the response during pagination. Response: {data}")
             time.sleep(1)  # Avoid hitting the server too frequently
+
         products = []
         for product in all_items:
             raw_data = product['raw']
@@ -374,19 +393,17 @@ def refresh_data(store_id=None):
                 'raw_sell_rank_monthly': raw_data.get('sell_rank_monthly', 'N/A')
             }
             products.append(product_info)
-        
+
+        # Create a temporary DataFrame for immediate display
         df_products = pd.DataFrame(products)
-        # Calculate mean rating for products with reviews
-        valid_reviews = pd.to_numeric(df_products['raw_avg_reviews'], errors='coerce')
-        valid_ratings = pd.to_numeric(df_products['raw_ec_rating'], errors='coerce')
-        mean_rating = valid_ratings[valid_reviews > 0].mean()
-        minimum_votes = 10  # Minimum number of votes required
 
-        def weighted_rating(R, v, m, C):
-            # Calculate IMDb-style weighted rating
-            return (v / (v + m)) * R + (m / (v + m)) * C
+        # Calculate weighted rating
+        minimum_votes = df_products['raw_avg_reviews'].quantile(0.90)
+        mean_rating = df_products['raw_ec_rating'].mean()
 
-        # Compute weighted rating using numeric conversion
+        def weighted_rating(rating, votes, min_votes, avg_rating):
+            return (votes / (votes + min_votes) * rating) + (min_votes / (votes + min_votes) * avg_rating)
+
         df_products['weighted_rating'] = df_products.apply(
             lambda x: weighted_rating(
                 float(x['raw_ec_rating']) if pd.notna(x['raw_ec_rating']) and x['raw_ec_rating'] != 'N/A' else 0,
@@ -396,16 +413,12 @@ def refresh_data(store_id=None):
             ),
             axis=1
         )
-        for product in products:
-            product["Date"] = today_str  # Add today's date to each product
-            supabase_upsert_record(PRODUCTS_TABLE, product)
-        st.success("Data refreshed and updated!")
-        
-        # Check favourites for lowest prices and send an email
-        lowest_price_items = get_favourites_with_lowest_price()
-        send_email_with_lowest_prices(lowest_price_items)
-        
-        return load_products_from_supabase()
+
+        # Start background thread for updates
+        threading.Thread(target=background_update, args=(products, today_str), daemon=True).start()
+
+        st.success("Data loaded! Background updates are in progress.")
+        return df_products
     else:
         st.error("Failed to retrieve data from the API.")
         return None
