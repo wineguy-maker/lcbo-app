@@ -128,14 +128,17 @@ def save_favourites(favourites):
     today_str = datetime.now().strftime("%Y-%m-%d")
     for uri in favourites:
         supabase_upsert_record(FAVOURITES_TABLE, {"URI": uri, "Date": today_str, "User ID": "admin"})
-    st.success("Favourites saved successfully!")
+    
+    # Force a refresh of the app to update the button state
+    st.rerun()
 
 def delete_favourites(favourites):
     """Remove favourites in Supabase."""
     for uri in favourites:
         supabase_delete_record(FAVOURITES_TABLE, uri, "admin")
     st.success("Favourites deleted successfully!")
-
+    # Force a refresh of the app to update the button state
+    st.rerun()
 
 def toggle_favourite(wine_id):
     """Toggle the favourite status of a wine."""
@@ -150,8 +153,7 @@ def toggle_favourite(wine_id):
         # Add to favourites
         save_favourites([wine_id])
         st.success(f"Added wine with URI '{wine_id}' to favourites.")
-        st.rerun()
-    # Force a refresh of the app to update the button state
+        
     
 
 
