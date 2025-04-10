@@ -10,7 +10,8 @@ from firebase_admin import credentials, db
 
 # Initialize Firebase Admin SDK
 if not firebase_admin._apps:
-    cred = credentials.Certificate(st.secrets["firebase_credentials"])
+    # Pass the dictionary directly from st.secrets
+    cred = credentials.Certificate(dict(st.secrets["firebase_credentials"]))
     firebase_admin.initialize_app(cred, {
         'databaseURL': st.secrets["firebase_database"]["url"]
     })
