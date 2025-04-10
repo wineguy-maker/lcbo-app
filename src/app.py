@@ -5,6 +5,9 @@ from datetime import datetime
 import requests
 import re
 from supabase import create_client, Client
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 
 # Supabase Configuration
 SUPABASE_URL = st.secrets["supabase"]["url"]
@@ -176,6 +179,79 @@ def transform_image_url(url, new_size):
 # -------------------------------
 # Refresh function
 # -------------------------------
+def get_favourites_with_lowest_price():
+    """Check if favourites are at their lowest price."""
+    favourites = supabase_get_records(FAVOURITES_TABLE)
+    products = supabase_get_records(PRODUCTS_TABLE)
+    price_history = supabase_get_records("Price History") 
+
+    lowest_price_items = []
+    for fav in favourites:
+        uri = fav["URI"]
+
+        # Look up the current price in the Products table
+        product = next((p for p in products if p["uri"] == uri), None)
+        if not product:
+            continue
+        current_price = product.get("raw_ec_promo_price", "N/A")
+        if current_price == "N/A":
+            current_price = product.get("raw_ec_price", "N/A")
+        if current_price == "N/A":
+            continue  # Skip if no valid price is found
+
+        # Look up the lowest price in the Price History table
+        history = [entry for entry in price_history if entry["URI"] == uri]
+        if not history:
+            continue
+        lowest_price = min(entry["Price"] for entry in history)  
+
+        # Compare prices
+        if float(current_price) == float(lowest_price):
+            lowest_price_items.append({
+                "Title": product.get("title", "Unknown"),  
+                "URI": uri,
+                "Current Price": current_price,
+                "Lowest Price": lowest_price
+            })
+    return lowest_price_items
+
+def send_email_with_lowest_prices(items):
+    """Send an email with the list of favourite items at their lowest price using Postmark."""
+    if not items:
+        return
+
+    # Postmark API configuration
+    api_url = "https://api.postmarkapp.com/email"
+    api_token = st.secrets["postmark_token"]  # Retrieve the token from secrets
+
+    # Prepare the email content
+    subject = "Favourites at Their Lowest Price"
+    html_content = "<h3>Favourites at Their Lowest Price</h3><table border='1'><tr><th>Title</th><th>URI</th><th>Current Price</th><th>Lowest Price</th></tr>"
+    for item in items:
+        html_content += f"<tr><td>{item['Title']}</td><td><a href='{item['URI']}'>{item['URI']}</a></td><td>{item['Current Price']}</td><td>{item['Lowest Price']}</td></tr>"
+    html_content += "</table>"
+
+    # Create the email payload
+    payload = {
+        "From": "winefind@justemail.ca",  # Replace with your sender email
+        "To": "winefind@justemail.ca",  # Replace with your recipient email
+        "Subject": subject,
+        "HtmlBody": html_content
+    }
+
+    # Send the email via Postmark API
+    headers = {
+        "X-Postmark-Server-Token": api_token,
+        "Content-Type": "application/json"
+    }
+
+    try:
+        response = requests.post(api_url, json=payload, headers=headers)
+        response.raise_for_status()
+        st.success("Email sent successfully via Postmark!")
+    except requests.exceptions.RequestException as e:
+        st.error(f"Failed to send email via Postmark: {e}")
+
 def refresh_data(store_id=None):
     """Refresh data and update Supabase."""
     current_time = datetime.now()
@@ -325,7 +401,12 @@ def refresh_data(store_id=None):
         for product in products:
             product["Date"] = today_str  # Add today's date to each product
             supabase_upsert_record(PRODUCTS_TABLE, product)
-        st.success("Data refreshed and updated in Supabase!")
+        st.success("Data refreshed and updated!")
+        
+        # Check favourites for lowest prices and send an email
+        lowest_price_items = get_favourites_with_lowest_price()
+        send_email_with_lowest_prices(lowest_price_items)
+        
         return load_products_from_supabase()
     else:
         st.error("Failed to retrieve data from the API.")
@@ -335,7 +416,7 @@ def refresh_data(store_id=None):
 # Main Streamlit App
 # -------------------------------
 def main():
-    st.title("LCBO Wine Filter")
+    st.title("🍷 LCBO Wine Filter")
     # Add this line to clear the cached data
     st.cache_data.clear()
 
