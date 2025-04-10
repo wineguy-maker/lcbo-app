@@ -121,7 +121,9 @@ def filter_data(data, country='All Countries', region='All Regions', varietal='A
 def load_favourites():
     """Load favourites from Supabase."""
     records = supabase_get_records(FAVOURITES_TABLE)
+    print("Debug: Records fetched:", records)
     return [record["URI"] for record in records if record.get("User ID") == "admin"]
+
 
 def save_favourites(favourites):
     """Save favourites to Supabase."""
