@@ -255,21 +255,29 @@ def ensure_collection_exists(collection_name):
     }
     response = requests.get(base_url, headers=headers)
     if response.status_code == 200:
-        collections = response.json()
-        if collection_name not in [col["collection"] for col in collections]:
-            st.info(f"Collection '{collection_name}' does not exist. Creating it...")
-            create_response = requests.post(
-                base_url,
-                headers=headers,
-                json={"collection": collection_name}
-            )
-            if create_response.status_code == 201:
-                st.success(f"Collection '{collection_name}' created successfully!")
+        try:
+            collections = response.json()
+            if isinstance(collections, list):  # Ensure it's a list
+                if collection_name not in [col.get("collection", "") for col in collections]:
+                    st.info(f"Collection '{collection_name}' does not exist. Creating it...")
+                    create_response = requests.post(
+                        base_url,
+                        headers=headers,
+                        json={"collection": collection_name}
+                    )
+                    if create_response.status_code == 201:
+                        st.success(f"Collection '{collection_name}' created successfully!")
+                    else:
+                        st.error("Failed to create collection.")
+                        st.stop()
             else:
-                st.error("Failed to create collection.")
+                st.error("Unexpected response format from KV Store API.")
                 st.stop()
+        except Exception as e:
+            st.error(f"Error parsing KV Store response: {e}")
+            st.stop()
     else:
-        st.error("Failed to check collections.")
+        st.error(f"Failed to check collections. Status code: {response.status_code}")
         st.stop()
 
 def load_favourites():
