@@ -9,8 +9,8 @@ from supabase import create_client, Client
 
 
 # Supabase Configuration
-SUPABASE_URL = "https://xofspwrujtkdwzosnfdi.supabase.co"
-SUPABASE_SERVICE_ROLE_KEY = "your_service_role_key_here"  # Replace with your service role key
+SUPABASE_URL = st.secrets["supabase"]["url"]
+SUPABASE_SERVICE_ROLE_KEY = st.secrets["supabase"]["key"]
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
 
 PRODUCTS_TABLE = "Products"
