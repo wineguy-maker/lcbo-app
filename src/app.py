@@ -440,7 +440,7 @@ def main():
                 # Force a refresh of the app to update the button state
                 st.rerun()
         else:
-            st.markdown(f"{heart_icon} Favourite (Admin Only)", unsafe_allow_html=True)
+            st.markdown(f"{heart_icon} Favourite", unsafe_allow_html=True)
 
         # Raw SVG data for the sale icon
         sale_icon_svg = """
