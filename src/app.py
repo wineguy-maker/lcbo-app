@@ -261,7 +261,8 @@ def ensure_collection_exists(collection_name):
 
             # Extract collections based on the response format
             if isinstance(collections_data.get("collections"), dict):  # Handle dictionary format
-                collections = list(collections_data["collections"].keys())
+                collections = collections_data["collections"]
+                st.info(f"Existing collections: {list(collections.keys())}")
             else:
                 st.error(f"Unexpected 'collections' format: {collections_data.get('collections')}")
                 st.stop()
@@ -279,6 +280,8 @@ def ensure_collection_exists(collection_name):
                 else:
                     st.error(f"Failed to create collection. Status code: {create_response.status_code}, Response: {create_response.text}")
                     st.stop()
+            else:
+                st.info(f"Collection '{collection_name}' already exists.")
         except Exception as e:
             st.error(f"Error parsing KV Store response: {e}")
             st.stop()
@@ -314,9 +317,14 @@ def save_favourites(favourites):
         "kvstoreio_api_key": st.secrets["kv_api_key"],
         "Content-Type": "application/json"
     }
-    response = requests.put(kv_url, headers=headers, json={"value": favourites})
-    if response.status_code != 200:
-        st.error("Failed to save favourites to KV Store.")
+    payload = {"value": favourites}
+    response = requests.put(kv_url, headers=headers, json=payload)
+    
+    if response.status_code == 200:
+        st.success("Favourites saved successfully!")
+    else:
+        st.error(f"Failed to save favourites. Status code: {response.status_code}, Response: {response.text}")
+        st.write("Payload:", payload)  # Log the payload for debugging
 
 def toggle_favourite(wine_id):
     """Toggle the favourite status of a wine."""
