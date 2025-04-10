@@ -337,12 +337,6 @@ def main():
 
     # Authorization in the filters pane
     if "authorized" not in st.session_state:
-
-    # Sidebar Filters with improved header
-    st.sidebar.header("Filter Options 🔍")
-
-    # Authorization in the filters pane
-    if "authorized" not in st.session_state:
         st.session_state.authorized = False
 
     with st.sidebar.expander("Admin Authorization"):
