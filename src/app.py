@@ -246,36 +246,44 @@ def refresh_data(store_id=None):
 # -------------------------------
 FAVOURITES_FILE = "favourites.json"
 
-def ensure_collection_exists():
+def ensure_collection_exists(collection_name):
     """Ensure the KV Store collection exists."""
     base_url = "https://api.kvstore.io/collections"
-    collection_uuid = "fa470bf0-c9cd-401d-a0c5-5bbc239f6e9d"
-    kv_url = f"{base_url}/{collection_uuid}"
-    headers = {"Authorization": f"Bearer {st.secrets['kv_api_key']}"}
-
-    # Check if the collection exists
-    response = requests.get(kv_url, headers=headers)
-    if response.status_code == 404:  # Collection does not exist
-        st.info("Collection does not exist. Creating it...")
-        create_response = requests.post(base_url, headers=headers, json={"uuid": collection_uuid})
-        if create_response.status_code == 201:
-            st.success("Collection created successfully!")
-        else:
-            st.error("Failed to create collection.")
-            st.stop()
-    elif response.status_code != 200:
-        st.error("Failed to check collection existence.")
+    headers = {
+        "Content-Type": "application/json",
+        "kvstoreio_api_key": st.secrets["kv_api_key"]
+    }
+    response = requests.get(base_url, headers=headers)
+    if response.status_code == 200:
+        collections = response.json()
+        if collection_name not in [col["collection"] for col in collections]:
+            st.info(f"Collection '{collection_name}' does not exist. Creating it...")
+            create_response = requests.post(
+                base_url,
+                headers=headers,
+                json={"collection": collection_name}
+            )
+            if create_response.status_code == 201:
+                st.success(f"Collection '{collection_name}' created successfully!")
+            else:
+                st.error("Failed to create collection.")
+                st.stop()
+    else:
+        st.error("Failed to check collections.")
         st.stop()
 
 def load_favourites():
     """Load favourites from the KV Store."""
-    ensure_collection_exists()  # Ensure the collection exists
-    kv_url = "https://api.kvstore.io/collections/fa470bf0-c9cd-401d-a0c5-5bbc239f6e9d/favourites.json"
-    headers = {"Authorization": f"Bearer {st.secrets['kv_api_key']}"}
+    collection_name = "favourites_collection"
+    ensure_collection_exists(collection_name)  # Ensure the collection exists
+    kv_url = f"https://api.kvstore.io/collections/{collection_name}/items/favourites"
+    headers = {"kvstoreio_api_key": st.secrets["kv_api_key"]}
     try:
         response = requests.get(kv_url, headers=headers)
         if response.status_code == 200:
-            return response.json()
+            return response.json().get("value", [])
+        elif response.status_code == 404:
+            return []  # Key does not exist yet
         else:
             st.error("Failed to load favourites from KV Store.")
             return []
@@ -285,10 +293,14 @@ def load_favourites():
 
 def save_favourites(favourites):
     """Save favourites to the KV Store."""
-    ensure_collection_exists()  # Ensure the collection exists
-    kv_url = "https://api.kvstore.io/collections/fa470bf0-c9cd-401d-a0c5-5bbc239f6e9d/favourites.json"
-    headers = {"Authorization": f"Bearer {st.secrets['kv_api_key']}"}
-    response = requests.put(kv_url, json=favourites, headers=headers)
+    collection_name = "favourites_collection"
+    ensure_collection_exists(collection_name)  # Ensure the collection exists
+    kv_url = f"https://api.kvstore.io/collections/{collection_name}/items/favourites"
+    headers = {
+        "kvstoreio_api_key": st.secrets["kv_api_key"],
+        "Content-Type": "application/json"
+    }
+    response = requests.put(kv_url, headers=headers, json={"value": favourites})
     if response.status_code != 200:
         st.error("Failed to save favourites to KV Store.")
 
