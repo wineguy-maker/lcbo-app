@@ -5,17 +5,8 @@ from datetime import datetime
 import requests
 import re
 import json
-import firebase_admin
-from firebase_admin import credentials, db
 from supabase import create_client, Client
 
-# Initialize Firebase Admin SDK
-if not firebase_admin._apps:
-    # Pass the dictionary directly from st.secrets
-    cred = credentials.Certificate(dict(st.secrets["firebase_credentials"]))
-    firebase_admin.initialize_app(cred, {
-        'databaseURL': st.secrets["firebase_database"]["url"]
-    })
 
 # Supabase Configuration
 SUPABASE_URL = "https://xofspwrujtkdwzosnfdi.supabase.co"
