@@ -32,16 +32,17 @@ def supabase_upsert_record(table_name, record):
         st.error(f"Failed to upsert record in {table_name}: {e}")
         return None
 
-def supabase_delete_record(table_name, filters):
+def supabase_delete_record(table_name, URI, user_id):
     """Delete a record from a Supabase table."""
     try:
         query = supabase.table(table_name)
-        for key, value in filters.items():
-            if not isinstance(value, (str, int, float, bool)):
-                st.error(f"Invalid filter value for key '{key}': {value} (type: {type(value)})")
-                return None
-            query = query.eq(key, value)
-        response = query.delete().execute()
+        response = (
+        supabase.table(table_name)
+        .delete()
+        .eq("URI", URI)        # First filter
+        .eq("User ID",user_id)  # Second filter
+        .execute()
+        )
         return response.data  # Use the data attribute for successful responses
     except Exception as e:
         st.error(f"Failed to delete record from {table_name}: {e}")
@@ -133,8 +134,8 @@ def delete_favourites(favourites):
     """Remove favourites in Supabase."""
     today_str = datetime.now().strftime("%Y-%m-%d")
     for uri in favourites:
-        supabase_delete_record(FAVOURITES_TABLE, {"URI": uri, "User ID": "admin"})
-    st.success("Favourites saved successfully!")
+        supabase_delete_record(FAVOURITES_TABLE, uri, "admin"})
+    st.success("Favourites deleted successfully!")
 
 
 def toggle_favourite(wine_id):
@@ -144,11 +145,11 @@ def toggle_favourite(wine_id):
     if wine_id in favourites:
         # Remove from favourites by filtering the table using the URI column
         delete_favourites([wine_id])
-        st.success(f"Removed wine with URI '{wine_id}' from favourites.")
+
     else:
         # Add to favourites
         save_favourites([wine_id])
-        st.success(f"Added wine with URI '{wine_id}' to favourites.")
+
 
 # -------------------------------
 # Helper: Transform Image URL
