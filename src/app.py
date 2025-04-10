@@ -283,19 +283,21 @@ def main():
     # Add this line to clear the cached data
     st.cache_data.clear()
 
-    # Authorization
+    # Sidebar Filters with improved header
+    st.sidebar.header("Filter Options 🔍")
+
+    # Authorization in the filters pane
     if "authorized" not in st.session_state:
         st.session_state.authorized = False
 
-    if not st.session_state.authorized:
-        pin_input = st.text_input("Enter PIN", type="password")
-        if st.button("Submit"):
+    with st.sidebar.expander("Admin Authorization"):
+        pin_input = st.text_input("Enter PIN", type="password", key="auth_pin")
+        if st.button("Submit", key="auth_submit"):
             if pin_input == st.secrets["correct_pin"]:
                 st.session_state.authorized = True
-                st.success("Authorization successful!")
+                st.sidebar.success("Authorization successful!")
             else:
-                st.error("Incorrect PIN. Please try again.")
-        return  # Stop execution until authorized
+                st.sidebar.error("Incorrect PIN. Please try again.")
 
     # Initialize session state for favourites and UI updates
     if "favourites" not in st.session_state:
@@ -329,8 +331,6 @@ def main():
     else:
         data = load_data("products.csv")
 
-    # Sidebar Filters with improved header
-    st.sidebar.header("Filter Options 🔍")
     search_text = st.sidebar.text_input("Search", value="")
     sort_by = st.sidebar.selectbox("Sort by",
                                    ['Sort by', '# of reviews', 'Rating', 'Top Veiwed - Year', 'Top Veiwed - Month', 'Top Seller - Year',
