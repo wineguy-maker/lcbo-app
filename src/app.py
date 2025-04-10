@@ -289,7 +289,10 @@ def refresh_data(store_id=None):
     today_str = current_time.strftime("%Y-%m-%d")
     # Check if today's data already exists in Supabase
     records = supabase_get_records(PRODUCTS_TABLE)
-   
+    if any(record.get("Date") == today_str for record in records):
+        st.info("Today's data already exists. Skipping refresh.")
+        return load_products_from_supabase()
+
     url = "https://platform.cloud.coveo.com/rest/search/v2?organizationId=lcboproduction2kwygmc"
     headers = {
         "User-Agent": "your_user_agent",
@@ -365,9 +368,26 @@ def refresh_data(store_id=None):
                 st.error(f"Key 'results' not found in the response during pagination. Response: {data}")
             time.sleep(1)  # Avoid hitting the server too frequently
 
+        # Calculate minimum votes and mean rating for weighted rating
+        temp_df = pd.DataFrame([{
+            'raw_ec_rating': float(item['raw'].get('ec_rating', 0)),
+            'raw_avg_reviews': float(item['raw'].get('avg_reviews', 0))
+        } for item in all_items])
+        minimum_votes = temp_df['raw_avg_reviews'].quantile(0.90)
+        mean_rating = temp_df['raw_ec_rating'].mean()
+
+        def weighted_rating(rating, votes, min_votes, avg_rating):
+            """Calculate IMDb-style weighted rating."""
+            if votes >= min_votes:
+                return (votes / (votes + min_votes) * rating) + (min_votes / (votes + min_votes) * avg_rating)
+            else:
+                return (votes / (votes + min_votes) * rating) + (min_votes / (votes + min_votes) * avg_rating)
+
         products = []
         for product in all_items:
             raw_data = product['raw']
+            rating = float(raw_data.get('ec_rating', 0))
+            votes = float(raw_data.get('avg_reviews', 0))
             product_info = {
                 'title': product.get('title', 'N/A'),
                 'uri': product.get('uri', 'N/A'),
@@ -397,9 +417,9 @@ def refresh_data(store_id=None):
                 'raw_out_of_stock': raw_data.get('out_of_stock', 'N/A'),
                 'stores_inventory': raw_data.get('stores_inventory', 0),
                 'raw_online_inventory': raw_data.get('online_inventory', 0),
-                'raw_avg_reviews': raw_data.get('avg_reviews', 0),
-                'raw_ec_rating': raw_data.get('ec_rating', 0),
-                'weighted_rating': 0.0,  # Placeholder for weighted rating
+                'raw_avg_reviews': votes,
+                'raw_ec_rating': rating,
+                'weighted_rating': weighted_rating(rating, votes, minimum_votes, mean_rating),
                 'raw_view_rank_yearly': raw_data.get('view_rank_yearly', 'N/A'),
                 'raw_view_rank_monthly': raw_data.get('view_rank_monthly', 'N/A'),
                 'raw_sell_rank_yearly': raw_data.get('sell_rank_yearly', 'N/A'),
@@ -409,23 +429,6 @@ def refresh_data(store_id=None):
 
         # Create a temporary DataFrame for immediate display
         df_products = pd.DataFrame(products)
-
-        # Calculate weighted rating
-        minimum_votes = df_products['raw_avg_reviews'].quantile(0.90)
-        mean_rating = df_products['raw_ec_rating'].mean()
-
-        def weighted_rating(rating, votes, min_votes, avg_rating):
-            return (votes / (votes + min_votes) * rating) + (min_votes / (votes + min_votes) * avg_rating)
-
-        df_products['weighted_rating'] = df_products.apply(
-            lambda x: weighted_rating(
-                float(x['raw_ec_rating']) if pd.notna(x['raw_ec_rating']) and x['raw_ec_rating'] != 'N/A' else 0,
-                float(x['raw_avg_reviews']) if pd.notna(x['raw_avg_reviews']) and x['raw_avg_reviews'] != 'N/A' else 0,
-                minimum_votes,
-                mean_rating if not pd.isna(mean_rating) else 0
-            ),
-            axis=1
-        )
 
         # Start background thread for updates
         threading.Thread(target=background_update, args=(products, today_str), daemon=True).start()
