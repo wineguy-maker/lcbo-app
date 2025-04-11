@@ -9,6 +9,7 @@ import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 import threading
+import json
 
 # Supabase Configuration
 SUPABASE_URL = st.secrets["supabase"]["url"]
@@ -465,6 +466,20 @@ def refresh_data(store_id=None):
 # -------------------------------
 # Main Streamlit App
 # -------------------------------
+def get_country_flag_url(country_name):
+    """
+    Load country-to-code mapping from JSON and return the local flag SVG path.
+    """
+    try:
+        with open("country_codes.json", "r") as file:
+            country_to_code = json.load(file)
+        country_code = country_to_code.get(country_name)
+        if country_code:
+            return f"SVG/{country_code}.svg"  # Use the local SVG folder
+    except Exception as e:
+        st.error(f"Error loading country codes: {e}")
+    return None
+
 def main():
     st.title("🍷 LCBO Wine Filter")
     # Add this line to clear the cached data
@@ -579,7 +594,22 @@ def main():
 
     # Display Products
     for idx, row in page_data.iterrows():
-        st.markdown(f"### {row['title']}")
+        # Get the flag URL
+        country_name = row.get('raw_country_of_manufacture', 'N/A')
+        flag_url = get_country_flag_url(country_name) if country_name != 'N/A' else None
+
+        # Combine the title and flag in a single Markdown string
+        if flag_url:
+            st.markdown(
+                f"""<h3 style="display: flex; align-items: center;">
+                    {row['title']}
+                    <img src="{flag_url}" alt="{country_name}" style="margin-left: 10px; width: 30px; height: 20px;">
+                </h3>""",
+                unsafe_allow_html=True
+            )
+        else:
+            st.markdown(f"### {row['title']}")
+
         promo_price = row.get('raw_ec_promo_price', None)
         regular_price = row.get('raw_ec_price', 'N/A')
 
