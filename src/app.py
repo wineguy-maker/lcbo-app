@@ -128,6 +128,8 @@ def filter_data(data, country='All Countries', region='All Regions', varietal='A
     if varietal != 'All Varietals':
         data = data[data['raw_lcbo_varietal_name'] == varietal]
     if in_stock:
+        # Ensure 'stores_inventory' is numeric
+        data['stores_inventory'] = pd.to_numeric(data['stores_inventory'], errors='coerce')
         data = data[data['stores_inventory'] > 0]
     if only_vintages:
         data = data[data['raw_lcbo_program'].str.contains(r"['\"]Vintages['\"]", regex=True, na=False)]
@@ -302,6 +304,7 @@ def refresh_data(store_id=None):
     # Check if today's data already exists in Supabase
     records = supabase_get_records(PRODUCTS_TABLE)
    
+
     url = "https://platform.cloud.coveo.com/rest/search/v2?organizationId=lcboproduction2kwygmc"
     headers = {
         "User-Agent": "your_user_agent",
