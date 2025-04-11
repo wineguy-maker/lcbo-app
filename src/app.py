@@ -475,7 +475,7 @@ def get_country_flag_url(country_name):
             country_to_code = json.load(file)
         country_code = country_to_code.get(country_name)
         if country_code:
-            return f"SVG/{country_code}.svg"  # Use the local SVG folder
+            return f"https://raw.githubusercontent.com/wineguy-maker/lcbo-app/69ba2f8f0a5b20572fb0855c7e86a1fea0b37815/SVG/{country_code}.svg"  # Use the local SVG folder
     except Exception as e:
         st.error(f"Error loading country codes: {e}")
     return None
