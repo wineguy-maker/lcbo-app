@@ -25,8 +25,7 @@ def supabase_get_records(table_name):
         response = supabase.table(table_name).select("*").execute()
         return response.data  # Use the data attribute for successful responses
     except Exception as e:
-        st.error(f"Failed to fetch records from {table_name}: {e}")
-        return []
+        return []  # Remove st.error message
 
 def supabase_upsert_record(table_name, record):
     """Insert or update a record in a Supabase table."""
@@ -34,8 +33,7 @@ def supabase_upsert_record(table_name, record):
         response = supabase.table(table_name).upsert(record).execute()
         return response.data  # Use the data attribute for successful responses
     except Exception as e:
-        st.error(f"Failed to upsert record in {table_name}: {e}")
-        return None
+        return None  # Remove st.error message
 
 def supabase_delete_record(table_name, URI, user_id):
     """Delete a record from a Supabase table."""
@@ -50,8 +48,7 @@ def supabase_delete_record(table_name, URI, user_id):
         )
         return response.data  # Use the data attribute for successful responses
     except Exception as e:
-        st.error(f"Failed to delete record from {table_name}: {e}")
-        return None
+        return None  # Remove st.error message
 
 def load_products_from_supabase():
     """Load products from Supabase."""
@@ -71,8 +68,7 @@ def load_food_items():
         food_items = pd.read_csv('food_items.csv')
         return food_items
     except Exception as e:
-        st.error(f"Error loading food items: {e}")
-        return pd.DataFrame(columns=['Category', 'FoodItem'])
+        return pd.DataFrame(columns=['Category', 'FoodItem'])  # Remove st.error message
 
 def sort_data(data, column):
     sorted_data = data.sort_values(by=column, ascending=False)
@@ -173,11 +169,11 @@ def toggle_favourite(wine_id):
     if wine_id in favourites:
         # Remove from favourites by filtering the table using the URI column
         delete_favourites([wine_id])
-        st.success(f"Removed wine with URI '{wine_id}' from favourites.")
+        st.success(f"Removed wine with URI '{wine_id}' from favourites.")  # Keep this message
     else:
         # Add to favourites
         save_favourites([wine_id])
-        st.success(f"Added wine with URI '{wine_id}' to favourites.")
+        st.success(f"Added wine with URI '{wine_id}' to favourites.")  # Keep this message
     st.rerun()  # Ensure the UI updates after toggling
 
 # -------------------------------
@@ -330,7 +326,7 @@ def refresh_data(store_id=None):
     if 'results' in data:
         all_items = data['results']
         total_count = data['totalCount']
-        st.info(f"Loaded {total_count} items.")  # Simplified message
+        st.info(f"Loaded {total_count} items.")  # Keep this message
         num_requests = (total_count // 500) + (1 if total_count % 500 != 0 else 0)
         for i in range(1, num_requests):
             payload = {
@@ -457,11 +453,10 @@ def refresh_data(store_id=None):
         threading.Thread(target=update_supabase, daemon=True).start()
         threading.Thread(target=background_update(df_products, today_str), daemon=True).start()
 
-        st.success("Data loaded! Background updates are in progress.")
+        st.success("Data loaded! Background updates are in progress.")  # Keep this message
         return df_products
     else:
-        st.error("Failed to retrieve data from the API.")
-        return None
+        return None  # Remove st.error message
 
 # -------------------------------
 # Main Streamlit App
@@ -475,7 +470,7 @@ def get_country_flag_url(country_name):
             country_to_code = json.load(file)
         country_code = country_to_code.get(country_name)
         if country_code:
-            return f"https://raw.githubusercontent.com/wineguy-maker/lcbo-app/69ba2f8f0a5b20572fb0855c7e86a1fea0b37815/SVG/{country_code}.svg"  # Use the local SVG folder
+            return f"SVG/{country_code}.svg"  # Use the local SVG folder
     except Exception as e:
         st.error(f"Error loading country codes: {e}")
     return None
