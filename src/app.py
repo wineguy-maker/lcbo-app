@@ -173,14 +173,11 @@ def toggle_favourite(wine_id):
         # Remove from favourites by filtering the table using the URI column
         delete_favourites([wine_id])
         st.success(f"Removed wine with URI '{wine_id}' from favourites.")
-        st.rerun()
     else:
         # Add to favourites
         save_favourites([wine_id])
         st.success(f"Added wine with URI '{wine_id}' to favourites.")
-        
-    
-
+    st.rerun()  # Ensure the UI updates after toggling
 
 # -------------------------------
 # Helper: Transform Image URL
@@ -285,7 +282,8 @@ def refresh_data(store_id=None):
     today_str = current_time.strftime("%Y-%m-%d")
     # Check if today's data already exists in Supabase
     records = supabase_get_records(PRODUCTS_TABLE)
-   
+    if any(record.get("Date") == today_str for record in records):
+        return load_products_from_supabase()
 
     url = "https://platform.cloud.coveo.com/rest/search/v2?organizationId=lcboproduction2kwygmc"
     headers = {
@@ -596,10 +594,6 @@ def main():
         if st.session_state.authorized:
             if st.button(f"{heart_icon} Favourite", key=f"fav-{wine_id}"):
                 toggle_favourite(wine_id)
-            if st.button(f"{heart_icon} Favourite", key=f"fav-{wine_id}"):
-                toggle_favourite(wine_id)
-                # Force a refresh of the app to update the button state
-                st.rerun()
         else:
             st.markdown(f"{heart_icon} Favourite", unsafe_allow_html=True)
 
