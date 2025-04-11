@@ -24,7 +24,7 @@ def supabase_get_records(table_name):
         response = supabase.table(table_name).select("*").execute()
         return response.data  # Use the data attribute for successful responses
     except Exception as e:
-        st.error(f"Failed to fetch records from {table_name}: {e}")
+     
         return []
 
 def supabase_upsert_record(table_name, record):
@@ -33,7 +33,7 @@ def supabase_upsert_record(table_name, record):
         response = supabase.table(table_name).upsert(record).execute()
         return response.data  # Use the data attribute for successful responses
     except Exception as e:
-        st.error(f"Failed to upsert record in {table_name}: {e}")
+        
         return None
 
 def supabase_delete_record(table_name, URI, user_id):
@@ -49,7 +49,7 @@ def supabase_delete_record(table_name, URI, user_id):
         )
         return response.data  # Use the data attribute for successful responses
     except Exception as e:
-        st.error(f"Failed to delete record from {table_name}: {e}")
+        
         return None
 
 def load_products_from_supabase():
@@ -70,7 +70,7 @@ def load_food_items():
         food_items = pd.read_csv('food_items.csv')
         return food_items
     except Exception as e:
-        st.error(f"Error loading food items: {e}")
+        
         return pd.DataFrame(columns=['Category', 'FoodItem'])
 
 def sort_data(data, column):
@@ -172,12 +172,12 @@ def toggle_favourite(wine_id):
     if wine_id in favourites:
         # Remove from favourites by filtering the table using the URI column
         delete_favourites([wine_id])
-        st.success(f"Removed wine with URI '{wine_id}' from favourites.")
+  
         st.rerun()
     else:
         # Add to favourites
         save_favourites([wine_id])
-        st.success(f"Added wine with URI '{wine_id}' to favourites.")
+        
         
     
 
@@ -269,16 +269,16 @@ def send_email_with_lowest_prices(items):
             server.starttls()
             server.login(smtp_username, smtp_password)
             server.sendmail(sender_email, receiver_email, message.as_string())
-        st.success("Email sent successfully via Postmark SMTP!")
+
     except Exception as e:
-        st.error(f"Failed to send email via Postmark SMTP: {e}")
+
 
 def background_update(df_products, today_str):
     """Perform additional background tasks like checking favourites and sending emails."""
     # Check favourites for lowest prices and send an email
     lowest_price_items = get_favourites_with_lowest_price()
     send_email_with_lowest_prices(lowest_price_items)
-    st.info("Background update: Price history and email notifications completed.")
+
 
 def refresh_data(store_id=None):
     """Refresh data and update Supabase."""
@@ -286,7 +286,7 @@ def refresh_data(store_id=None):
     today_str = current_time.strftime("%Y-%m-%d")
     # Check if today's data already exists in Supabase
     records = supabase_get_records(PRODUCTS_TABLE)
-
+   
 
     url = "https://platform.cloud.coveo.com/rest/search/v2?organizationId=lcboproduction2kwygmc"
     headers = {
@@ -360,7 +360,7 @@ def refresh_data(store_id=None):
             if 'results' in data:
                 all_items.extend(data['results'])
             else:
-                st.error(f"Key 'results' not found in the response during pagination. Response: {data}")
+       
             time.sleep(1)  # Avoid hitting the server too frequently
 
         
