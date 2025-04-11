@@ -119,15 +119,13 @@ def filter_and_sort_data(data, sort_by, **filters):
     data = sort_data_filter(data, sort_by)
     return data
 
-def filter_data(data, country='All Countries', region='All Regions', varietal='All Varietals', exclude_usa=False, in_stock=False, only_vintages=False, store='Select Store'):
+def filter_data(data, country='All Countries', region='All Regions', varietal='All Varietals', exclude_usa=False, in_stock=False, only_vintages=False):
     if country != 'All Countries':
         data = data[data['raw_country_of_manufacture'] == country]
     if region != 'All Regions':
         data = data[data['raw_lcbo_region_name'] == region]
     if varietal != 'All Varietals':
         data = data[data['raw_lcbo_varietal_name'] == varietal]
-    if store != 'Select Store':
-        data = data[data['store_name'] == store]
     if in_stock:
         data = data[data['stores_inventory'] > 0]
     if only_vintages:
@@ -577,6 +575,8 @@ def main():
         is_favourite = wine_id in st.session_state.favourites  # Check the updated favourites list
         heart_icon = "❤️" if is_favourite else "🤍"
         if st.session_state.authorized:
+            if st.button(f"{heart_icon} Favourite", key=f"fav-{wine_id}"):
+                toggle_favourite(wine_id)
             if st.button(f"{heart_icon} Favourite", key=f"fav-{wine_id}"):
                 toggle_favourite(wine_id)
                 # Force a refresh of the app to update the button state
