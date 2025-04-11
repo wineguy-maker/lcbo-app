@@ -297,7 +297,9 @@ def refresh_data(store_id=None):
     today_str = current_time.strftime("%Y-%m-%d")
     # Check if today's data already exists in Supabase
     records = supabase_get_records(PRODUCTS_TABLE)
-   
+    if any(record.get("Date") == today_str for record in records):
+        st.info("Today's data already exists. Skipping refresh.")
+        return load_products_from_supabase()
 
     url = "https://platform.cloud.coveo.com/rest/search/v2?organizationId=lcboproduction2kwygmc"
     headers = {
@@ -444,10 +446,28 @@ def refresh_data(store_id=None):
 
         # Start background thread for updates
         def update_supabase():
+            """Update the Products and Price History tables in Supabase."""
             for _, product in df_products.iterrows():
                 product_data = product.to_dict()
                 product_data["Date"] = today_str  # Add today's date
+
+                # Update the Products table
                 supabase_upsert_record(PRODUCTS_TABLE, product_data)
+
+                # Determine the price to store in the Price History table
+                price = product_data.get("raw_ec_promo_price", "N/A")
+                if price == "N/A":
+                    price = product_data.get("raw_ec_price", "N/A")
+
+                # Update the Price History table if a valid price exists
+                if price != "N/A":
+                    price_history_data = {
+                        "URI": product_data.get("uri", "N/A"),
+                        "Title": product_data.get("title", "Unknown"),
+                        "Date": today_str,
+                        "Price": price
+                    }
+                    supabase_upsert_record("Price History", price_history_data)
 
         threading.Thread(target=update_supabase, daemon=True).start()
         threading.Thread(target=background_update(df_products, today_str), daemon=True).start()
