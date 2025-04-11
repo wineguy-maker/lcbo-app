@@ -24,7 +24,7 @@ def supabase_get_records(table_name):
         response = supabase.table(table_name).select("*").execute()
         return response.data  # Use the data attribute for successful responses
     except Exception as e:
-     
+        st.error(f"Failed to fetch records from {table_name}: {e}")
         return []
 
 def supabase_upsert_record(table_name, record):
@@ -33,7 +33,7 @@ def supabase_upsert_record(table_name, record):
         response = supabase.table(table_name).upsert(record).execute()
         return response.data  # Use the data attribute for successful responses
     except Exception as e:
-        
+        st.error(f"Failed to upsert record in {table_name}: {e}")
         return None
 
 def supabase_delete_record(table_name, URI, user_id):
@@ -49,7 +49,7 @@ def supabase_delete_record(table_name, URI, user_id):
         )
         return response.data  # Use the data attribute for successful responses
     except Exception as e:
-        
+        st.error(f"Failed to delete record from {table_name}: {e}")
         return None
 
 def load_products_from_supabase():
@@ -70,7 +70,7 @@ def load_food_items():
         food_items = pd.read_csv('food_items.csv')
         return food_items
     except Exception as e:
-        
+        st.error(f"Error loading food items: {e}")
         return pd.DataFrame(columns=['Category', 'FoodItem'])
 
 def sort_data(data, column):
@@ -162,7 +162,7 @@ def delete_favourites(favourites):
         supabase_delete_record(FAVOURITES_TABLE, uri, "admin")
     # Reload favourites to ensure button state is updated
     st.session_state.favourites = load_favourites()
-    st.success("Favourites deleted successfully!")
+    st.success("Favourites removed successfully!")
     st.rerun()
 
 def toggle_favourite(wine_id):
@@ -172,12 +172,12 @@ def toggle_favourite(wine_id):
     if wine_id in favourites:
         # Remove from favourites by filtering the table using the URI column
         delete_favourites([wine_id])
-  
+        st.success(f"Removed wine with URI '{wine_id}' from favourites.")
         st.rerun()
     else:
         # Add to favourites
         save_favourites([wine_id])
-        
+        st.success(f"Added wine with URI '{wine_id}' to favourites.")
         
     
 
@@ -269,9 +269,8 @@ def send_email_with_lowest_prices(items):
             server.starttls()
             server.login(smtp_username, smtp_password)
             server.sendmail(sender_email, receiver_email, message.as_string())
-
     except Exception as e:
-
+        pass
 
 def background_update(df_products, today_str):
     """Perform additional background tasks like checking favourites and sending emails."""
@@ -332,7 +331,7 @@ def refresh_data(store_id=None):
     if 'results' in data:
         all_items = data['results']
         total_count = data['totalCount']
-        st.info(f"Total Count: {total_count}")
+        st.info(f"Loaded {total_count} items.")  # Simplified message
         num_requests = (total_count // 500) + (1 if total_count % 500 != 0 else 0)
         for i in range(1, num_requests):
             payload = {
@@ -360,7 +359,7 @@ def refresh_data(store_id=None):
             if 'results' in data:
                 all_items.extend(data['results'])
             else:
-       
+                st.error(f"Key 'results' not found in the response during pagination. Response: {data}")
             time.sleep(1)  # Avoid hitting the server too frequently
 
         
