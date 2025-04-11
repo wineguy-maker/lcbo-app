@@ -284,16 +284,10 @@ def send_email_with_lowest_prices(items):
         print(f"Failed to send email: {e}")  # Debug print
         st.error(f"Failed to send email via Postmark SMTP: {e}")
 
-def background_update(products, today_str):
-    """Perform table updates and price history processing in the background."""
-    for product in products:
-        product["Date"] = today_str  # Add today's date to each product
-        supabase_upsert_record(PRODUCTS_TABLE, product)
-    st.info("Background update: Products table updated.")
-
+def background_update(df_products, today_str):
+    """Perform additional background tasks like checking favourites and sending emails."""
     # Check favourites for lowest prices and send an email
     lowest_price_items = get_favourites_with_lowest_price()
-    
     send_email_with_lowest_prices(lowest_price_items)
     st.info("Background update: Price history and email notifications completed.")
 
@@ -456,6 +450,7 @@ def refresh_data(store_id=None):
                 supabase_upsert_record(PRODUCTS_TABLE, product_data)
 
         threading.Thread(target=update_supabase, daemon=True).start()
+        threading.Thread(target=background_update(df_products, today_str), daemon=True).start()
 
         st.success("Data loaded! Background updates are in progress.")
         return df_products
