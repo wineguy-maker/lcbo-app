@@ -436,7 +436,13 @@ def refresh_data(store_id=None):
 
 
         # Start background thread for updates
-        threading.Thread(target=background_update, args=(products, today_str), daemon=True).start()
+        def update_supabase():
+            for _, product in df_products.iterrows():
+                product_data = product.to_dict()
+                product_data["Date"] = today_str  # Add today's date
+                supabase_upsert_record(PRODUCTS_TABLE, product_data)
+
+        threading.Thread(target=update_supabase, daemon=True).start()
 
         st.success("Data loaded! Background updates are in progress.")
         return df_products
