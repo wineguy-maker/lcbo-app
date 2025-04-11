@@ -205,37 +205,46 @@ def get_favourites_with_lowest_price():
     lowest_price_items = []
     for fav in favourites:
         uri = fav["URI"]
+        print(f"Checking favourite item with URI: {uri}")  # Debug print
 
         # Look up the current price in the Products table
         product = next((p for p in products if p["uri"] == uri), None)
         if not product:
+            print(f"No product found for URI: {uri}")  # Debug print
             continue
         current_price = product.get("raw_ec_promo_price", "N/A")
-        if (current_price == "N/A"):
+        if current_price == "N/A":
             current_price = product.get("raw_ec_price", "N/A")
-        if (current_price == "N/A"):
-            continue  # Skip if no valid price is found
+        if current_price == "N/A":
+            print(f"No valid price found for product with URI: {uri}")  # Debug print
+            continue
 
         # Look up the lowest price in the Price History table
         history = [entry for entry in price_history if entry["URI"] == uri]
         if not history:
+            print(f"No price history found for URI: {uri}")  # Debug print
             continue
-        lowest_price = min(entry["Price"] for entry in history)  
+        lowest_price = min(entry["Price"] for entry in history)
 
         # Compare prices
         if float(current_price) == float(lowest_price):
+            print(f"Item at lowest price: {product.get('title', 'Unknown')} (URI: {uri})")  # Debug print
             lowest_price_items.append({
                 "Title": product.get("title", "Unknown"),  
                 "URI": uri,
                 "Current Price": current_price,
                 "Lowest Price": lowest_price
             })
+    print(f"Lowest price items found: {lowest_price_items}")  # Debug print
     return lowest_price_items
 
 def send_email_with_lowest_prices(items):
     """Send an email with the list of favourite items at their lowest price using Postmark SMTP."""
     if not items:
+        print("No items at their lowest price. Skipping email.")  # Debug print
         return
+
+    print(f"Preparing to send email for items: {items}")  # Debug print
 
     # Postmark SMTP configuration
     smtp_server = "smtp-broadcasts.postmarkapp.com"
@@ -267,8 +276,10 @@ def send_email_with_lowest_prices(items):
             server.starttls()
             server.login(smtp_username, smtp_password)
             server.sendmail(sender_email, receiver_email, message.as_string())
+        print("Email sent successfully!")  # Debug print
         st.success("Email sent successfully via Postmark SMTP!")
     except Exception as e:
+        print(f"Failed to send email: {e}")  # Debug print
         st.error(f"Failed to send email via Postmark SMTP: {e}")
 
 def background_update(products, today_str):
@@ -290,8 +301,7 @@ def refresh_data(store_id=None):
     today_str = current_time.strftime("%Y-%m-%d")
     # Check if today's data already exists in Supabase
     records = supabase_get_records(PRODUCTS_TABLE)
-    
-
+   
     url = "https://platform.cloud.coveo.com/rest/search/v2?organizationId=lcboproduction2kwygmc"
     headers = {
         "User-Agent": "your_user_agent",
