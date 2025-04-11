@@ -297,9 +297,6 @@ def refresh_data(store_id=None):
     today_str = current_time.strftime("%Y-%m-%d")
     # Check if today's data already exists in Supabase
     records = supabase_get_records(PRODUCTS_TABLE)
-    if any(record.get("Date") == today_str for record in records):
-        st.info("Today's data already exists. Skipping refresh.")
-        return load_products_from_supabase()
 
     url = "https://platform.cloud.coveo.com/rest/search/v2?organizationId=lcboproduction2kwygmc"
     headers = {
