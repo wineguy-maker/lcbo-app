@@ -106,13 +106,15 @@ def sort_data_filter(data, sort_by):
 
 def filter_and_sort_data(data, sort_by, **filters):
     """Apply filters and ensure IMDb-style sorting is always the default."""
+    # Extract search_text from filters and handle it separately
+    search_text = filters.pop('search_text', '')
+
     # Apply filters
     data = filter_data(data, **filters)
-    
+
     # Apply search filter
-    search_text = filters.get('search_text', '')
     data = search_data(data, search_text)
-    
+
     # Sort data
     data = sort_data_filter(data, sort_by)
     return data
