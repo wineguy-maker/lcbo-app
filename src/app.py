@@ -106,8 +106,9 @@ def sort_data_filter(data, sort_by):
 
 def filter_and_sort_data(data, sort_by, **filters):
     """Apply filters and ensure IMDb-style sorting is always the default."""
-    # Extract search_text from filters and handle it separately
+    # Extract search_text and store from filters and handle them separately
     search_text = filters.pop('search_text', '')
+    filters.pop('store', None)  # Remove 'store' key if it exists
 
     # Apply filters
     data = filter_data(data, **filters)
